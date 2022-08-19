@@ -28,7 +28,6 @@ var (
 
 func main() {
 	println("On main timestamp:", time.Now().UnixMilli())
-	extension.LoadSecrets()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	sigs := make(chan os.Signal, 1)
