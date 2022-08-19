@@ -25,7 +25,9 @@ func LoadSecrets() {
 	fmt.Println("Current timestamp:", time.Now().UnixMilli())
 
 	secretIds := readSecretIdsFromEnvironmentWhenStartsWithSecret()
-	secrets := getSecretValuesFromListOfSecretIds(secretIds)
+	secretsChannel := make(chan Secret, len(secretIds))
+	go getSecretValuesFromListOfSecretIds(secretIds, secretsChannel)
+	secrets := collectSecrets(secretsChannel)
 	writeSecrets(secrets)
 
 	fmt.Println("finished timestamp:", time.Now().UnixMilli())
@@ -43,17 +45,17 @@ func readSecretIdsFromEnvironmentWhenStartsWithSecret() []string {
 	return secretIds
 }
 
-func getSecretValuesFromListOfSecretIds(secretIds []string) []Secret {
-	var secrets []Secret
+func getSecretValuesFromListOfSecretIds(secretIds []string, secretsChannel chan Secret) {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	checkError(err)
 	client := secretsmanager.NewFromConfig(cfg)
 
 	for _, secretId := range secretIds {
+		log.Print("Fetch secret: "+secretId+" on ", time.Now().UnixMilli())
 		secret := getSecretValue(client, secretId)
-		secrets = append(secrets, secret)
+		secretsChannel <- secret
 	}
-	return secrets
+	close(secretsChannel)
 }
 
 func getSecretValue(client *secretsmanager.Client, secretId string) Secret {
@@ -65,6 +67,14 @@ func getSecretValue(client *secretsmanager.Client, secretId string) Secret {
 	checkError(err)
 
 	return Secret{secretId, aws.ToString(output.SecretString)}
+}
+
+func collectSecrets(secretsChannel chan Secret) []Secret {
+	var secrets []Secret
+	for secret := range secretsChannel {
+		secrets = append(secrets, secret)
+	}
+	return secrets
 }
 
 func writeSecrets(secrets []Secret) {
