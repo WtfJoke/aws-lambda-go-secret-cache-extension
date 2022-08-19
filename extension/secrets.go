@@ -57,9 +57,11 @@ func getSecretValuesFromListOfSecretIds(secretIds []string) []Secret {
 }
 
 func getSecretValue(client *secretsmanager.Client, secretId string) Secret {
+	log.Print("Fetch secret: ", secretId, " on ", time.Now().UnixMilli())
 	output, err := client.GetSecretValue(context.TODO(), &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretId),
 	})
+	log.Print("After fetching secret ", time.Now().UnixMilli())
 	checkError(err)
 
 	return Secret{secretId, aws.ToString(output.SecretString)}
