@@ -26,7 +26,7 @@ func LoadSecrets() {
 	fmt.Println("Current timestamp:", time.Now().UnixMilli())
 
 	secretIds := readSecretIdsFromEnvironmentWhenStartsWithSecret()
-	secrets :=  getSecretValuesFromListOfSecretIds(secretIds)
+	secrets := getSecretValuesFromListOfSecretIds(secretIds)
 	writeSecrets(secrets)
 
 	fmt.Println("finished timestamp:", time.Now().UnixMilli())
