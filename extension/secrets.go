@@ -29,8 +29,7 @@ func LoadSecrets() {
 	secrets := getSecretValuesFromListOfSecretIds(secretIds)
 	writeSecrets(secrets)
 
-	fmt.Println("finished timestamp:", time.Now().UnixMilli())
-	log.Print("finished loading secrets")
+	fmt.Println("Finished loading secrets on", time.Now().UnixMilli())
 }
 
 func readSecretIdsFromEnvironmentWhenStartsWithSecret() []string {
@@ -48,35 +47,30 @@ func getSecretValuesFromListOfSecretIds(secretIds []string) []Secret {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	checkError(err)
 	client := secretsmanager.NewFromConfig(cfg)
-	secretsChannel := make(chan Secret, len(secretIds))
+	secretsCount := len(secretIds)
+	secretsChannel := make(chan Secret, secretsCount)
 	wg := sync.WaitGroup{}
 	startTime := time.Now()
 	for _, secretId := range secretIds {
 		wg.Add(1)
-		 go func(secretId string) { 
+		go func(secretId string) {
 			fetchStartTime := time.Now()
-			log.Print("Fetch secret: "+secretId+" started on ", time.Now().UnixMilli(), time.Since(startTime))
-			secretsChannel <- getSecretValue(client, secretId) 
-			log.Print("Fetch secret: "+secretId+" done on ", time.Now().UnixMilli(), time.Since(startTime), time.Since(fetchStartTime))
+			secretsChannel <- getSecretValue(client, secretId)
+			log.Print("Fetched secret '", secretId, "' in ", time.Since(fetchStartTime))
 			wg.Done()
-			}(secretId)
-		
+		}(secretId)
 	}
 	wg.Wait()
-	log.Print("All secrets fetched on ", time.Now().UnixMilli(), time.Since(startTime))
+	log.Print("All ", secretsCount, " secrets fetched in ", time.Since(startTime))
 	close(secretsChannel)
 	loadedSecrets := collectSecrets(secretsChannel)
 	return loadedSecrets
 }
 
 func getSecretValue(client *secretsmanager.Client, secretId string) Secret {
-	fetchStartTime := time.Now()
-
-	log.Print("Fetch secret: ", secretId, " on ", time.Now().UnixMilli())
 	output, err := client.GetSecretValue(context.TODO(), &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretId),
 	})
-	log.Print("After fetching secret ", time.Now().UnixMilli(), time.Since(fetchStartTime))
 	checkError(err)
 
 	return Secret{secretId, aws.ToString(output.SecretString)}
@@ -87,7 +81,6 @@ func collectSecrets(secretsChannel chan Secret) []Secret {
 	for secret := range secretsChannel {
 		secrets = append(secrets, secret)
 	}
-	log.Print(len(secrets), " secrets loaded")
 	return secrets
 }
 
@@ -105,8 +98,3 @@ func checkError(err error) {
 		log.Fatal(err)
 	}
 }
-
-// TODOS:
-// create channel which accepts secretIds
-// foreach over secret ids resolving/fetching secrets
-// output channel writes secrets to file
