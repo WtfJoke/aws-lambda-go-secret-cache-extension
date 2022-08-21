@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -28,8 +29,7 @@ func LoadSecrets() {
 	secrets := getSecretValuesFromListOfSecretIds(secretIds)
 	writeSecrets(secrets)
 
-	fmt.Println("finished timestamp:", time.Now().UnixMilli())
-	log.Print("finished loading secrets")
+	fmt.Println("Finished loading secrets on", time.Now().UnixMilli())
 }
 
 func readSecretIdsFromEnvironmentWhenStartsWithSecret() []string {
@@ -44,27 +44,44 @@ func readSecretIdsFromEnvironmentWhenStartsWithSecret() []string {
 }
 
 func getSecretValuesFromListOfSecretIds(secretIds []string) []Secret {
-	var secrets []Secret
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	checkError(err)
 	client := secretsmanager.NewFromConfig(cfg)
-
+	secretsCount := len(secretIds)
+	secretsChannel := make(chan Secret, secretsCount)
+	wg := sync.WaitGroup{}
+	startTime := time.Now()
 	for _, secretId := range secretIds {
-		secret := getSecretValue(client, secretId)
-		secrets = append(secrets, secret)
+		wg.Add(1)
+		go func(secretId string) {
+			fetchStartTime := time.Now()
+			secretsChannel <- getSecretValue(client, secretId)
+			log.Print("Fetched secret '", secretId, "' in ", time.Since(fetchStartTime))
+			wg.Done()
+		}(secretId)
 	}
-	return secrets
+	wg.Wait()
+	log.Print("All ", secretsCount, " secrets fetched in ", time.Since(startTime))
+	close(secretsChannel)
+	loadedSecrets := collectSecrets(secretsChannel)
+	return loadedSecrets
 }
 
 func getSecretValue(client *secretsmanager.Client, secretId string) Secret {
-	log.Print("Fetch secret: ", secretId, " on ", time.Now().UnixMilli())
 	output, err := client.GetSecretValue(context.TODO(), &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretId),
 	})
-	log.Print("After fetching secret ", time.Now().UnixMilli())
 	checkError(err)
 
 	return Secret{secretId, aws.ToString(output.SecretString)}
+}
+
+func collectSecrets(secretsChannel chan Secret) []Secret {
+	var secrets []Secret
+	for secret := range secretsChannel {
+		secrets = append(secrets, secret)
+	}
+	return secrets
 }
 
 func writeSecrets(secrets []Secret) {
@@ -72,6 +89,7 @@ func writeSecrets(secrets []Secret) {
 	checkError(marshaledErr)
 	secretFilePath := path.Join(os.TempDir(), "secrets.json")
 	write_err := os.WriteFile(secretFilePath, marshaleldSecret, 0644)
+	log.Print("Secrets written to ", secretFilePath)
 	checkError(write_err)
 }
 
@@ -80,8 +98,3 @@ func checkError(err error) {
 		log.Fatal(err)
 	}
 }
-
-// TODOS:
-// create channel which accepts secretIds
-// foreach over secret ids resolving/fetching secrets
-// output channel writes secrets to file
