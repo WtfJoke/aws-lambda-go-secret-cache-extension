@@ -1,8 +1,6 @@
 # shellcheck disable=SC2164
-GOOS=linux GOARCH=amd64 go build -o bin/extensions/go-example-extension main.go
-chmod +x bin/extensions/go-example-extension
-cd bin
-zip -r extension.zip extensions/
+./scripts/build.sh
+./scripts/bundle.sh
 
 aws lambda publish-layer-version \
  --layer-name "Secrets-Lambda-Extension-Layer" \
