@@ -1,0 +1,55 @@
+# This is the SAM template that represents the architecture of your serverless application
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-template-basics.html
+
+# The AWSTemplateFormatVersion identifies the capabilities of the template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/format-version-structure.html
+AWSTemplateFormatVersion: 2010-09-09   Type: String
+    Description: Secret value stored in AWS Secrets manager
+    Default: "MySecret"
+    NoEcho: true
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # Each Lambda function is defined by properties:
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+
+  # This is a Lambda function config associated with the source code: hello-from-lambda.js
+  helloFromLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/hello-from-lambda.helloFromLambdaHandler
+      Runtime: nodejs16.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: A Lambda function that returns a static string.
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref SecretRecord
+      Layers:
+        - !Ref CacheExtensionLayer
+      Environment:
+        Variables:
+          SECRET_VALUE: !Ref SecretRecord
+  # Sample Secret record
+  SecretRecord:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: "secret_info"
+      SecretString:
+        Ref: SecretValue
+  CacheExtensionLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: ../../../bin/
+      CompatibleRuntimes:
+        - nodejs12.x
+        - python3.8
+        - java11
+        - go1.x
+      LayerName: Cache_Extension_Layer
+      Description: Caching layer for DynamoDB
