@@ -89,7 +89,8 @@ func TestGetSecretValuesFromListOfSecretIds(t *testing.T) {
 
 	secret := getSecretValuesFromListOfSecretIds([]string{"secret-id-2", "secret-id-1"}, mockSecretValueGetter)
 
-	assert.Equal(t, []Secret{{"secret-id-1", "secret-id-1-value"}, {"secret-id-2", "secret-id-2-value"}}, secret)
+	assert.Contains(t, secret, Secret{"secret-id-1", "secret-id-1-value"})
+	assert.Contains(t, secret, Secret{"secret-id-2", "secret-id-2-value"})
 }
 
 func TestWriteSecrets(t *testing.T) {
