@@ -17,7 +17,7 @@ import (
 )
 
 type Secret struct {
-	SecertId, SecretString string
+	SecretId, SecretString string
 }
 
 func LoadSecrets() {
@@ -69,10 +69,11 @@ func getSecretValuesFromListOfSecretIds(secretIds []string, getSecretValue Secre
 }
 
 type SecretsmanagerGetSecretValueApi interface {
-	GetSecretValue(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options) ) (*secretsmanager.GetSecretValueOutput, error)
+	GetSecretValue(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error)
 }
 
 type SecretValueGetter func(client SecretsmanagerGetSecretValueApi, secretId string) Secret
+
 func getSecretValue(client SecretsmanagerGetSecretValueApi, secretId string) Secret {
 	log.Print("Fetch secret: ", secretId, " on ", time.Now().UnixMilli())
 	output, err := client.GetSecretValue(context.TODO(), &secretsmanager.GetSecretValueInput{
