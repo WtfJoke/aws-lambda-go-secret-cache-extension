@@ -17,7 +17,7 @@ import (
 )
 
 type Secret struct {
-	SecertId, SecretString string
+	SecretId, SecretString string
 }
 
 func LoadSecrets() {
@@ -26,15 +26,16 @@ func LoadSecrets() {
 	fmt.Println("Current timestamp:", time.Now().UnixMilli())
 
 	secretIds := readSecretIdsFromEnvironmentWhenStartsWithSecret()
-	secrets := getSecretValuesFromListOfSecretIds(secretIds)
+	secrets := getSecretValuesFromListOfSecretIds(secretIds, getSecretValue)
 	writeSecrets(secrets)
 
 	fmt.Println("Finished loading secrets on", time.Now().UnixMilli())
 }
 
 func readSecretIdsFromEnvironmentWhenStartsWithSecret() []string {
-	var secretIds []string
-	for _, secret := range os.Environ() {
+	secretIds := []string{}
+	envVars := os.Environ()
+	for _, secret := range envVars {
 		if strings.HasPrefix(secret, "SECRET_") {
 			pair := strings.SplitN(secret, "=", 2)
 			secretIds = append(secretIds, pair[1])
@@ -43,7 +44,7 @@ func readSecretIdsFromEnvironmentWhenStartsWithSecret() []string {
 	return secretIds
 }
 
-func getSecretValuesFromListOfSecretIds(secretIds []string) []Secret {
+func getSecretValuesFromListOfSecretIds(secretIds []string, getSecretValue SecretValueGetter) []Secret {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	checkError(err)
 	client := secretsmanager.NewFromConfig(cfg)
@@ -67,7 +68,14 @@ func getSecretValuesFromListOfSecretIds(secretIds []string) []Secret {
 	return loadedSecrets
 }
 
-func getSecretValue(client *secretsmanager.Client, secretId string) Secret {
+type SecretsmanagerGetSecretValueApi interface {
+	GetSecretValue(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error)
+}
+
+type SecretValueGetter func(client SecretsmanagerGetSecretValueApi, secretId string) Secret
+
+func getSecretValue(client SecretsmanagerGetSecretValueApi, secretId string) Secret {
+	log.Print("Fetch secret: ", secretId, " on ", time.Now().UnixMilli())
 	output, err := client.GetSecretValue(context.TODO(), &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretId),
 	})
