@@ -110,6 +110,6 @@ func TestWriteSecrets(t *testing.T) {
 	}
 
 	assert.Equal(t, 2, len(payload), "have written the wrong amount of secrets")
-	assert.Equal(t, secret1, payload[0])
-	assert.Equal(t, secret2, payload[1])
+	assert.Contains(t, payload, secret1)
+	assert.Contains(t, payload, secret2)
 }
