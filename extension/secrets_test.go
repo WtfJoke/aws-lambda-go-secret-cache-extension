@@ -103,7 +103,7 @@ func TestWriteSecrets(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Error while reading secrets.json", err.Error())
 	}
-	var payload []Secret
+	payload := []Secret{}
 	err = json.Unmarshal(content, &payload)
 	if err != nil {
 		assert.Fail(t, "Error while unmarshalling secrets.json", err.Error())
