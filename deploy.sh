@@ -4,7 +4,7 @@
 
 aws lambda publish-layer-version \
  --layer-name "Secrets-Lambda-Extension-Layer" \
- --zip-file  "fileb://extension.zip"
+ --zip-file  "fileb://bin/extension.zip"
 
 aws lambda update-function-configuration \
  --function-name foobar \
