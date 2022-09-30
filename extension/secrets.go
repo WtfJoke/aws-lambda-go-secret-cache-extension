@@ -20,6 +20,8 @@ type Secret struct {
 	SecretId, SecretString string
 }
 
+var secretsCache = make(map[string]Secret)
+
 func LoadSecrets() {
 	// log current timestamp
 	fmt.Println("Loading secrets...")
@@ -27,9 +29,21 @@ func LoadSecrets() {
 
 	secretIds := readSecretIdsFromEnvironmentWhenStartsWithSecret()
 	secrets := getSecretValuesFromListOfSecretIds(secretIds, getSecretValue)
-	writeSecrets(secrets)
+
+	fillSecretsCache(secrets)
+	// writeSecrets(secrets)
 
 	fmt.Println("Finished loading secrets on", time.Now().UnixMilli())
+}
+
+func GetSecretFromCache(secretName string) Secret {
+	return secretsCache[secretName]
+}
+
+func fillSecretsCache(secrets []Secret) {
+	for _, secret := range secrets {
+		secretsCache[secret.SecretId] = secret
+	}
 }
 
 func readSecretIdsFromEnvironmentWhenStartsWithSecret() []string {
