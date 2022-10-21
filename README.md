@@ -53,6 +53,63 @@ eg. `"LayerVersionArn": "arn:aws:lambda:<region>:123456789012:layer:<layerName>:
 
 Add the newly created layer version to a Lambda function.
 
+## Usage
+
+**Prerequisit**
+The lambda must have permissions to read the secrets
+
+All environment variables that start with `SECRET_` will be loaded and cached during init phase.
+The value of environment variable can be either the `secret name` or the `secret arn`.
+
+In the lambda handler itself the secret value can be accessed be making an http get call to
+
+`http://localhost:4000?name=<MY_SECRET_NAME>`
+
+<MY_SECRET_NAME> hereby is the value of the environment variable for that secret.
+
+### Example in AWS CDK
+
+```javascript
+export class SecretLambdaWithExtension extends Construct {
+  constructor(scope: Construct, id: string) {
+    super(scope, id);
+
+    const secret = new Secret(this, "Secret");
+
+    const layer = new LayerVersion(this, "SecretsCacheLayer", {
+      // reference the bundled extension zip file
+      code: new AssetCode(resolve(__dirname, "extension.zip")),
+      compatibleArchitectures: [Architecture.X86_64],
+    });
+
+    const lambda = new NodejsFunction(this, "Lambda", {
+      entry: "lib/secret-test/handler.ts",
+      environment: {
+        SECRET_MYSECRET: secret.secretName,
+      },
+      layers: [layer],
+    });
+
+    secret.grantRead(lambda);
+  }
+}
+```
+
+and a basic handler then looks like
+
+```javascript
+import fetch from "node-fetch";
+export const handler = async () => {
+  const secretName = process.env.SECRET_MYSECRET;
+
+  const secret = await fetch(
+    `http://localhost:4000/secrets?name=${secretName}`
+  ).then((res) => res.text());
+
+  console.log(secret);
+};
+```
+
 ## Function Invocation and Extension Execution
 
 When invoking the function, you should now see log messages from the example extension similar to the following:
