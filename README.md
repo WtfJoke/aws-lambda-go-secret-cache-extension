@@ -4,6 +4,16 @@ This AWS lambda extension fetches secrets from the aws secretsmanger during init
 
 **Note** This is a proof-of-concept implementation. Use this in production on your own risks.
 
+## What problem does this extension solves
+
+It is best practice to put secrets for a lambda execution into secretsmanager. This means you have to load the secret values the first time the lambda starts (cold-start).
+Reading a secret value is done by calling the aws secretsmanger api. This api call takes about 100ms per secret.
+In cases where the actual computation is very simple most of the cold start time is therefore used for retrieving the secret values.
+
+The following graphic shows the difference between ways of loading a secret value into the lambda runtime.
+
+![performance-comparison](./cold-start.drawio.svg)
+
 ## Compile package and dependencies
 
 You can compile the lambda extension to both currently supported AWS lambda runtimes. The defualt build runtime is `amd64`.
