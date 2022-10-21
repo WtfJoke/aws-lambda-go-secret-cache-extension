@@ -1,46 +1,52 @@
-# Example Extension in Go
+# AWS Lambda Extension secret cache
 
-The provided code sample demonstrates how to get a basic extension written in Go up and running. This extension can be used with runtimes that [support extensions](https://docs.aws.amazon.com/lambda/latest/dg/using-extensions.html) 
+This AWS lambda extension fetches secrets from the aws secretsmanger during init phase of the lambda cold start and then exposes them on a local webserver, so that the lambda can access the secret value by making a http call to the local webserver.
 
-***Note:*** *This example shows an extension written in Go, not an extension running in the Go runtime. The Go 1.x runtime does not support extensions. To support extensions, you can deploy Go functions on the provided.al2 runtime. For more information, see [Migrating Lambda functions to Amazon Linux 2](http://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-al2/).*
+**Note** This is a proof-of-concept implementation. Use this in production on your own risks.
 
 ## Compile package and dependencies
 
-To run this example, you will need to ensure that your build architecture matches that of the Lambda execution environment by compiling with `GOOS=linux` and `GOARCH=amd64` if you are not running in a Linux environment.
+You can compile the lambda extension to both currently supported AWS lambda runtimes. The defualt build runtime is `amd64`.
+
+To compile for the ARM runtime set an env variable `export ARCH=arm64`.
 
 Building and saving package into a `bin/extensions` directory:
+
 ```bash
-$ cd go-example-extension
-$ GOOS=linux GOARCH=amd64 go build -o bin/extensions/go-example-extension main.go
-$ chmod +x bin/extensions/go-example-extension
+./scripts/build.sh
 ```
 
+This creates a go binary for the target architecture.
+
 ## Layer Setup Process
-The extensions .zip file should contain a root directory called `extensions/`, where the extension executables are located. In this sample project we must include the `go-example-extension` binary.
+
+The extensions .zip file should contain a root directory called `extensions/`, where the extension executables are located. In this project we must include the `secret-cache-extension` binary.
 
 Creating zip package for the extension:
+
 ```bash
-$ cd bin
-$ zip -r extension.zip extensions/
+./scripts/bundle.sh
 ```
 
 Ensure that you have aws-cli v2 for the commands below.
 Publish a new layer using the `extension.zip`. The output of the following command should provide you a layer arn.
+
 ```bash
 aws lambda publish-layer-version \
- --layer-name "go-example-extension" \
+ --layer-name "secret-cache-extension" \
  --region <use your region> \
  --zip-file  "fileb://extension.zip"
 ```
+
 Note the LayerVersionArn that is produced in the output.
 eg. `"LayerVersionArn": "arn:aws:lambda:<region>:123456789012:layer:<layerName>:1"`
 
 Add the newly created layer version to a Lambda function.
 
-
 ## Function Invocation and Extension Execution
 
 When invoking the function, you should now see log messages from the example extension similar to the following:
+
 ```
     XXXX-XX-XXTXX:XX:XX.XXX-XX:XX    EXTENSION Name: go-example-extension State: Ready Events: [INVOKE,SHUTDOWN]
     XXXX-XX-XXTXX:XX:XX.XXX-XX:XX    START RequestId: 9ca08945-de9b-46ec-adc6-3fe9ef0d2e8d Version: $LATEST
