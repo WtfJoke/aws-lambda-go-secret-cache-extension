@@ -5,6 +5,7 @@ package main
 
 import (
 	"aws-lambda-go-secret-cache-extension/extension"
+	"aws-lambda-go-secret-cache-extension/webserver"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -43,7 +44,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// Preload secrets
 	extension.LoadSecrets()
+	// Start HTTP server
+	webserver.Start("4000")
 
 	println(printPrefix, "Register response:", prettyPrint(res))
 
