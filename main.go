@@ -62,14 +62,12 @@ func processEvents(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
-			println(printPrefix, "Waiting for event...")
 			res, err := extensionClient.NextEvent(ctx)
 			if err != nil {
 				println(printPrefix, "Error:", err)
 				println(printPrefix, "Exiting")
 				return
 			}
-			println(printPrefix, "Received event:", prettyPrint(res))
 			// Exit if we receive a SHUTDOWN event
 			if res.EventType == extension.Shutdown {
 				println(printPrefix, "Received SHUTDOWN event")
